@@ -15,7 +15,7 @@ WORKDIR /app
 
 # Копируем package файлы сервера
 COPY server/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Копируем исходный код сервера
 COPY server/ ./
