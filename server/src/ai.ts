@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 // Функция для получения Claude клиента (ленивая инициализация)
 function getAnthropicClient() {
@@ -9,9 +11,85 @@ function getAnthropicClient() {
     throw new Error('CLAUDE_API_KEY не найден в переменных окружения!');
   }
 
+  // Настройка прокси
+  let httpAgent = undefined;
+  const proxyUrl = process.env.PROXY_URL;
+  
+  if (proxyUrl) {
+    console.log('🌐 Используем прокси:', proxyUrl.replace(/\/\/.*@/, '//***@')); // Скрываем пароль в логах
+    
+    try {
+      if (proxyUrl.startsWith('socks://') || proxyUrl.startsWith('socks5://') || proxyUrl.startsWith('socks4://')) {
+        httpAgent = new SocksProxyAgent(proxyUrl);
+      } else if (proxyUrl.startsWith('http://') || proxyUrl.startsWith('https://')) {
+        httpAgent = new HttpsProxyAgent(proxyUrl);
+      } else if (proxyUrl.startsWith('ss://')) {
+        // Shadowsocks URL - используем локальный SOCKS5 прокси
+        parseShadowsocksUrl(proxyUrl); // Выводим информацию
+        const localSocks = `socks5://shadowsocks:1080`; // Используем имя контейнера
+        console.log('🔓 Используем Shadowsocks через локальный SOCKS5:', localSocks);
+        httpAgent = new SocksProxyAgent(localSocks);
+      }
+    } catch (error) {
+      console.error('⚠️ Ошибка настройки прокси:', error);
+      console.log('📡 Продолжаем без прокси...');
+    }
+  } else {
+    console.log('📡 Прокси не настроен, прямое подключение');
+  }
+
   return new Anthropic({
     apiKey: apiKey,
+    httpAgent: httpAgent,
   });
+}
+
+// Функция для парсинга Shadowsocks URL
+function parseShadowsocksUrl(ssUrl: string): string | null {
+  try {
+    // Формат: ss://base64(method:password)@server:port/?outline=1
+    const url = new URL(ssUrl);
+    const encodedPart = url.username;
+    
+    if (!encodedPart) {
+      return null;
+    }
+    
+    // Декодируем base64
+    const decoded = Buffer.from(encodedPart, 'base64').toString('utf-8');
+    const [method, password] = decoded.split(':');
+    
+    if (!method || !password) {
+      return null;
+    }
+    
+    const server = url.hostname;
+    const port = url.port;
+    
+    console.log('🔓 Shadowsocks конфигурация:');
+    console.log(`  Сервер: ${server}:${port}`);
+    console.log(`  Метод: ${method}`);
+    console.log(`  Пароль: ${password.substring(0, 8)}...`);
+    
+    // Для Shadowsocks нужен локальный SOCKS5 прокси
+    // Рекомендуем запустить ss-local и использовать localhost:1080
+    console.log('💡 Для использования Shadowsocks:');
+    console.log('   1. Установите shadowsocks-libev или shadowsocks-rust');
+    console.log('   2. Запустите локальный SOCKS5 прокси:');
+    console.log(`   ss-local -s ${server} -p ${port} -l 1080 -k "${password}" -m ${method}`);
+    console.log('   3. Установите PROXY_URL=socks5://127.0.0.1:1080');
+    
+    // Если есть переменная SS_LOCAL_PORT, используем её
+    const localPort = process.env.SS_LOCAL_PORT || '1080';
+    const localSocks = `socks5://127.0.0.1:${localPort}`;
+    
+    console.log(`🔄 Пробуем локальный SOCKS5 прокси: ${localSocks}`);
+    return localSocks;
+    
+  } catch (error) {
+    console.error('❌ Ошибка парсинга Shadowsocks URL:', error);
+    return null;
+  }
 }
 
 // Интерфейсы для типизации

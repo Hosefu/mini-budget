@@ -1,4 +1,11 @@
 services:
+  shadowsocks:
+    image: shadowsocks/shadowsocks-libev:latest
+    command: ss-local -s 188.130.208.33 -p 38765 -k "jrVvCICd0fcb2wS1A15AW5" -m chacha20-ietf-poly1305 -l 1080 -b 0.0.0.0
+    ports:
+      - "1080:1080"
+    restart: unless-stopped
+
   app:
     build: 
       context: .
@@ -11,4 +18,8 @@ services:
       - FNS_API_TOKEN=${FNS_API_TOKEN}
       - SESSION_KEY=${SESSION_KEY:-mini-budget-secret-key-change-in-production}
       - PORT=3000
+      - PROXY_URL=socks5://shadowsocks:1080
+      - SS_LOCAL_PORT=1080
+    depends_on:
+      - shadowsocks
     restart: unless-stopped 
