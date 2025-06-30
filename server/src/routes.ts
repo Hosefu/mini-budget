@@ -25,6 +25,7 @@ const requireAuth = (req: Request, res: Response, next: any) => {
 // Вход по PIN-коду
 router.post('/auth', (req: Request, res: Response) => {
   const { pin } = req.body;
+  console.log('🔐 Попытка входа с PIN:', pin);
   
   let role: 'egor' | 'syoma' | null = null;
   
@@ -35,10 +36,13 @@ router.post('/auth', (req: Request, res: Response) => {
   }
   
   if (!role) {
+    console.log('❌ Неверный PIN:', pin);
     return res.status(401).json({ error: 'Неверный PIN' });
   }
   
   req.session!.role = role;
+  console.log('✅ Успешный вход:', role);
+  console.log('🍪 Сессия:', req.session);
   res.json({ success: true, role });
 });
 
@@ -50,7 +54,12 @@ router.post('/logout', (req: Request, res: Response) => {
 
 // Проверка текущего пользователя
 router.get('/me', (req: Request, res: Response) => {
-  res.json({ role: req.session?.role || null });
+  console.log('👤 Проверка пользователя');
+  console.log('🍪 Текущая сессия:', req.session);
+  console.log('🔑 Роль из сессии:', req.session?.role);
+  const result = { role: req.session?.role || null };
+  console.log('📤 Возвращаем:', result);
+  res.json(result);
 });
 
 // === ПЛАТЕЖИ ===

@@ -9,11 +9,13 @@ import Layout from './components/Layout'
 
 function App() {
   // Проверяем авторизацию
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ['me'],
     queryFn: api.getMe,
     retry: false,
   })
+
+  console.log('🔍 App состояние:', { user, isLoading, error })
 
   if (isLoading) {
     return (
@@ -25,8 +27,11 @@ function App() {
 
   // Если не авторизован - показываем логин
   if (!user?.role) {
+    console.log('❌ Пользователь не авторизован, показываем логин')
     return <LoginPage />
   }
+
+  console.log('✅ Пользователь авторизован:', user.role)
 
   // Основное приложение с роутингом
   return (

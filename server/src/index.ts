@@ -17,7 +17,7 @@ initDatabase();
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production' ? true : 'http://localhost:5173',
   credentials: true
 }));
 
@@ -30,7 +30,7 @@ app.use(cookieSession({
   keys: [process.env.SESSION_KEY || 'budget-secret-key-change-in-production'],
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: false, // Отключаем для HTTP
   sameSite: 'lax'
 }));
 
