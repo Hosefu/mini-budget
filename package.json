@@ -27,12 +27,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/username/mini-budget.git"
+    "url": "git+https://github.com/Hosefu/mini-budget.git"
   },
   "bugs": {
-    "url": "https://github.com/username/mini-budget/issues"
+    "url": "https://github.com/Hosefu/mini-budget/issues"
   },
-  "homepage": "https://github.com/username/mini-budget#readme",
+  "homepage": "https://github.com/Hosefu/mini-budget#readme",
   "dependencies": {
     "@heroicons/react": "^2.2.0"
   }
