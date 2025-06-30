@@ -23,8 +23,8 @@ COPY server/ ./
 # Собираем TypeScript сервера
 RUN npm run build
 
-# Копируем собранный фронтенд
-COPY --from=frontend-builder /app/web/dist ./public
+# Копируем собранный фронтенд (Vite собирает в server/public)
+COPY --from=frontend-builder /app/server/public ./public
 
 # Создаем директории
 RUN mkdir -p /app/data
