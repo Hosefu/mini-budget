@@ -1,10 +1,10 @@
-import express from 'express';
+import { Request, Response, Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 const qrnode = require('qrnode'); // Используем require для CommonJS
 import { promisify } from 'util';
 
-const router = express.Router();
+const router = Router();
 
 // Конфигурация multer для загрузки файлов
 const upload = multer({
@@ -133,7 +133,7 @@ async function tryDecodeQR(buffer: Buffer, filename: string) {
 }
 
 // Endpoint для сканирования QR кода
-router.post('/scan-qr', upload.single('image'), async (req, res) => {
+router.post('/scan-qr', upload.single('image'), async (req: Request & { file?: any }, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
