@@ -13,23 +13,26 @@
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
-    "express": "^4.21.1",
+    "express": "^4.18.2",
     "https-proxy-agent": "^7.0.2",
     "socks-proxy-agent": "^8.0.2",
     "zod": "^3.22.4",
     "qrnode": "^0.1.0",
     "multer": "^1.4.5-lts.1",
-    "sharp": "^0.33.2"
+    "sharp": "^0.33.2",
+    "cookie-parser": "^1.4.7",
+    "express-session": "^1.18.1"
   },
   "devDependencies": {
     "@types/cookie-session": "^2.0.49",
     "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
+    "@types/express": "^4.17.21",
     "@types/express-session": "^1.18.0",
-    "@types/node": "^22.10.1",
+    "@types/node": "^20.10.5",
     "@types/multer": "^1.4.11",
-    "typescript": "^5.7.2",
+    "typescript": "^5.4.5",
     "nodemon": "^3.1.7",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "@types/cookie-parser": "^1.4.7"
   }
 }
