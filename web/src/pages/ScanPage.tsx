@@ -19,17 +19,19 @@ export default function ScanPage() {
   const processQRMutation = useMutation({
     mutationFn: api.processQR,
     onSuccess: (data) => {
+      console.log('🎉 QR обработан успешно:', data)
       setSuccess(data.message)
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['balance'] })
       setIsProcessingQR(false)
       
-      // Возвращаемся в меню через 2 секунды
+      // Возвращаемся в меню через 3 секунды
       setTimeout(() => {
         resetToMenu()
-      }, 2000)
+      }, 3000)
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ Ошибка обработки QR:', error)
       setIsProcessingQR(false)
     }
   })
@@ -369,6 +371,42 @@ export default function ScanPage() {
               <p className="text-gray-600">Анализируем изображение...</p>
               <p className="text-xs text-gray-500">Ищем QR код на фото</p>
             </div>
+          ) : processQRMutation.isPending ? (
+            <div className="space-y-4">
+              <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-gray-600">Обрабатываем чек...</p>
+              <p className="text-xs text-gray-500">Загружаем данные из ФНС</p>
+            </div>
+          ) : success ? (
+            <div className="space-y-4">
+              <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-green-600 font-medium">Готово!</p>
+              <p className="text-sm text-gray-600">{success}</p>
+            </div>
+          ) : processQRMutation.error ? (
+            <div className="space-y-4">
+              <div className="w-12 h-12 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <p className="text-red-600 font-medium">Ошибка</p>
+              <p className="text-sm text-gray-600">{(processQRMutation.error as Error).message}</p>
+            </div>
+          ) : scanError ? (
+            <div className="space-y-4">
+              <div className="w-12 h-12 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <p className="text-red-600 font-medium">QR не найден</p>
+              <p className="text-sm text-gray-600">{scanError}</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center">
@@ -376,7 +414,8 @@ export default function ScanPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="text-gray-600 font-medium">Файл обработан</p>
+              <p className="text-gray-600 font-medium">QR код найден</p>
+              <p className="text-xs text-gray-500">Обрабатываем данные чека...</p>
             </div>
           )}
         </div>
