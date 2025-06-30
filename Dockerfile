@@ -26,9 +26,8 @@ RUN npm run build
 # Копируем собранный фронтенд (Vite собирает в server/public)
 COPY --from=frontend-builder /app/server/public ./public
 
-# Создаем директории
-RUN mkdir -p /app/data
-RUN chown -R node:node /app
+# Создаем директории с правильными правами
+RUN mkdir -p /app/data && chown -R node:node /app
 
 # Переключаемся на пользователя node для безопасности
 USER node

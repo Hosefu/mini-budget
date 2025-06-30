@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Пути к файлам данных
-const DATA_DIR = path.join(process.cwd(), '../data');
+const DATA_DIR = path.join(process.cwd(), 'data');
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 const ITEMS_FILE = path.join(DATA_DIR, 'items.json');
