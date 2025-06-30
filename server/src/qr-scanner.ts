@@ -1,187 +1,159 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
+const qrnode = require('qrnode'); // Используем require для CommonJS
+import { promisify } from 'util';
 
-const router = Router();
+const router = express.Router();
 
-// Multer configuration for file uploads
+// Конфигурация multer для загрузки файлов
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB
   },
-  fileFilter: (req: any, file: any, cb: any) => {
+  fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Разрешены только изображения'));
+      cb(new Error('Только изображения разрешены!'));
     }
-  }
+  },
 });
 
-// QR Code scanning endpoint - теперь на бэкенде!
-router.post('/scan-qr', upload.single('image'), async (req: Request & { file?: any }, res: Response) => {
+// Превращаем callback-based функцию в Promise
+const qrDetect = promisify(qrnode.detect);
+
+// Методы обработки изображений для улучшения QR сканирования
+const processingMethods = [
+  {
+    name: 'Оригинал',
+    process: async (buffer: Buffer) => buffer
+  },
+  {
+    name: 'Контраст + резкость',
+    process: async (buffer: Buffer) => {
+      return await sharp(buffer)
+        .modulate({ brightness: 1.1, saturation: 0.8 })
+        .sharpen()
+        .toBuffer();
+    }
+  },
+  {
+    name: 'Черно-белое пороговое',
+    process: async (buffer: Buffer) => {
+      return await sharp(buffer)
+        .greyscale()
+        .threshold(128)
+        .toBuffer();
+    }
+  },
+  {
+    name: 'Адаптивное пороговое',
+    process: async (buffer: Buffer) => {
+      return await sharp(buffer)
+        .greyscale()
+        .normalise()
+        .toBuffer();
+    }
+  },
+  {
+    name: 'Улучшение краев',
+    process: async (buffer: Buffer) => {
+      return await sharp(buffer)
+        .greyscale()
+        .convolve({
+          width: 3,
+          height: 3,
+          kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1]
+        })
+        .toBuffer();
+    }
+  },
+  {
+    name: 'Морфологические операции',
+    process: async (buffer: Buffer) => {
+      return await sharp(buffer)
+        .greyscale()
+        .blur(0.5)
+        .threshold(100)
+        .toBuffer();
+    }
+  }
+];
+
+// Функция для попытки декодирования QR кода с разными методами обработки
+async function tryDecodeQR(buffer: Buffer, filename: string) {
+  console.log(`🔍 Обрабатываем QR файл: ${filename}`);
+  
+  for (let i = 0; i < processingMethods.length; i++) {
+    const method = processingMethods[i];
+    console.log(`🔧 Пробуем метод ${i + 1}/${processingMethods.length}: ${method.name}`);
+    
+    try {
+      // Обрабатываем изображение согласно методу
+      const processedBuffer = await method.process(buffer);
+      
+      // Сохраняем во временный файл для qrnode
+      const tempPath = `/tmp/qr_temp_${Date.now()}.png`;
+      await sharp(processedBuffer).png().toFile(tempPath);
+      
+      // Пытаемся декодировать QR
+      const decoded = await qrDetect(tempPath);
+      
+      // Удаляем временный файл
+      const fs = require('fs');
+      try {
+        fs.unlinkSync(tempPath);
+      } catch (e) {
+        // Игнорируем ошибки удаления
+      }
+      
+      if (decoded && decoded.trim()) {
+        console.log(`🎉 QR успешно декодирован методом ${i + 1} (${method.name}):`, decoded.substring(0, 100) + '...');
+        return {
+          success: true,
+          data: decoded,
+          method: i + 1,
+          methodName: method.name
+        };
+      } else {
+        console.log(`❌ Метод ${i + 1} (${method.name}) не нашел QR код`);
+      }
+    } catch (error: any) {
+      console.log(`❌ Метод ${i + 1} (${method.name}) не сработал:`, error.message);
+    }
+  }
+  
+  console.log('😞 Все методы обработки не смогли найти QR код');
+  return {
+    success: false,
+    error: 'QR код не найден ни одним из методов обработки'
+  };
+}
+
+// Endpoint для сканирования QR кода
+router.post('/scan-qr', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Файл изображения не предоставлен' });
+      return res.status(400).json({
+        success: false,
+        error: 'Файл изображения не загружен'
+      });
     }
 
-    console.log('🔍 Обрабатываем QR файл:', req.file.originalname);
+    const result = await tryDecodeQR(req.file.buffer, req.file.originalname);
     
-    // Обрабатываем изображение с множественными техниками улучшения
-    const originalBuffer = req.file.buffer;
-    
-    const enhancementMethods = [
-      // Оригинальное изображение
-      {
-        name: 'Оригинал',
-        process: async (buffer: Buffer) => buffer
-      },
-      
-             // Увеличение контрастности и резкости
-       {
-         name: 'Контраст + резкость',
-         process: async (buffer: Buffer) => sharp(buffer)
-           .greyscale()
-           .normalize()
-           .modulate({ brightness: 1.2, saturation: 1.8 })
-           .sharpen({ sigma: 1, m1: 0.5, m2: 2 })
-           .png()
-           .toBuffer()
-       },
-      
-      // Высокий контраст черно-белое
-      {
-        name: 'Черно-белое пороговое',
-        process: async (buffer: Buffer) => sharp(buffer)
-          .greyscale()
-          .normalise()
-          .threshold(120)
-          .png()
-          .toBuffer()
-      },
-      
-      // Адаптивное пороговое значение
-      {
-        name: 'Адаптивное пороговое',
-        process: async (buffer: Buffer) => sharp(buffer)
-          .greyscale()
-          .blur(0.3)
-          .sharpen()
-          .normalise()
-          .threshold(100)
-          .png()
-          .toBuffer()
-      },
-      
-      // Улучшение краев
-      {
-        name: 'Улучшение краев',
-        process: async (buffer: Buffer) => sharp(buffer)
-          .greyscale()
-          .convolve({
-            width: 3,
-            height: 3,
-            kernel: [-1, -1, -1, -1, 9, -1, -1, -1, -1]
-          })
-          .normalise()
-          .png()
-          .toBuffer()
-      },
-      
-             // Морфологические операции
-       {
-         name: 'Морфологические операции',
-         process: async (buffer: Buffer) => sharp(buffer)
-           .greyscale()
-           .blur(0.5)
-           .normalise()
-           .modulate({ brightness: 1.3, saturation: 2.0 })
-           .threshold(115)
-           .png()
-           .toBuffer()
-       }
-    ];
-
-    for (let i = 0; i < enhancementMethods.length; i++) {
-      const method = enhancementMethods[i];
-      try {
-        console.log(`🔧 Пробуем метод ${i + 1}/${enhancementMethods.length}: ${method.name}`);
-        
-        const processedBuffer = await method.process(originalBuffer);
-        
-        // Получаем метаданные изображения
-        const metadata = await sharp(processedBuffer).metadata();
-        if (!metadata.width || !metadata.height) {
-          console.log(`❌ Метод ${i + 1}: Не удалось получить размеры изображения`);
-          continue;
-        }
-
-        // Конвертируем в raw pixel data  
-        const { data, info } = await sharp(processedBuffer)
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-
-        // Динамически импортируем QR библиотеку (ES модуль)
-        const { default: decodeQR } = await import('qr/decode.js');
-        const { Bitmap } = await import('qr');
-        
-        // Создаем bitmap для QR декодера
-        const bitmap = new Bitmap({ 
-          width: info.width, 
-          height: info.height 
-        });
-        
-        // Конвертируем raw данные в 2D массив для qr библиотеки
-        const channels = info.channels;
-        const bmBits: number[][] = [];
-        
-        for (let y = 0; y < info.height; y++) {
-          const row: number[] = [];
-          for (let x = 0; x < info.width; x++) {
-            const pixelIndex = (y * info.width + x) * channels;
-            const value = channels === 1 ? data[pixelIndex] : 
-                         Math.round(0.299 * data[pixelIndex] + 0.587 * data[pixelIndex + 1] + 0.114 * data[pixelIndex + 2]);
-            // Инвертируем для лучшего распознавания
-            row.push(value > 128 ? 1 : 0);
-          }
-          bmBits.push(row);
-        }
-        
-        bitmap.data = bmBits as any;
-
-        // Пытаемся декодировать QR
-        const decoded = decodeQR(bitmap.toImage());
-        
-        if (decoded && decoded.trim()) {
-          console.log(`🎉 QR успешно декодирован методом ${i + 1} (${method.name}):`, decoded.substring(0, 100) + '...');
-          return res.json({ 
-            success: true, 
-            data: decoded,
-            method: i + 1,
-            methodName: method.name
-          });
-        } else {
-          console.log(`❌ Метод ${i + 1}: QR не найден или пустой`);
-        }
-      } catch (error: any) {
-        console.log(`❌ Метод ${i + 1} (${method.name}) не сработал:`, error.message);
-        continue;
-      }
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
     }
-
-    // Если все методы не сработали
-    console.log('😞 Все методы обработки не смогли найти QR код');
-    return res.json({ 
-      success: false, 
-      error: 'QR код не найден или не читается в этом изображении. Попробуйте сфотографировать код четче при хорошем освещении.' 
-    });
-
   } catch (error: any) {
-    console.error('💥 Ошибка QR сканирования:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Ошибка обработки изображения' 
+    console.error('❌ Ошибка при сканировании QR:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Внутренняя ошибка сервера при сканировании QR'
     });
   }
 });
