@@ -17,7 +17,7 @@
     "https-proxy-agent": "^7.0.2",
     "socks-proxy-agent": "^8.0.2",
     "zod": "^3.22.4",
-    "qrnode": "^0.1.0",
+    "node-quirc": "^2.3.0",
     "multer": "^1.4.5-lts.1",
     "sharp": "^0.33.2",
     "cookie-parser": "^1.4.7",

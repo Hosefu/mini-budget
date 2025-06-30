@@ -1,8 +1,7 @@
 import { Request, Response, Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-const qrnode = require('qrnode'); // Используем require для CommonJS
-import { promisify } from 'util';
+const quirc = require('node-quirc');
 
 const router = Router();
 
@@ -20,9 +19,6 @@ const upload = multer({
     }
   },
 });
-
-// Превращаем callback-based функцию в Promise
-const qrDetect = promisify(qrnode.detect);
 
 // Методы обработки изображений для улучшения QR сканирования
 const processingMethods = [
@@ -94,26 +90,15 @@ async function tryDecodeQR(buffer: Buffer, filename: string) {
       // Обрабатываем изображение согласно методу
       const processedBuffer = await method.process(buffer);
       
-      // Сохраняем во временный файл для qrnode
-      const tempPath = `/tmp/qr_temp_${Date.now()}.png`;
-      await sharp(processedBuffer).png().toFile(tempPath);
+      // Пытаемся декодировать QR с помощью quirc
+      const decoded = await quirc.decode(processedBuffer);
       
-      // Пытаемся декодировать QR
-      const decoded = await qrDetect(tempPath);
-      
-      // Удаляем временный файл
-      const fs = require('fs');
-      try {
-        fs.unlinkSync(tempPath);
-      } catch (e) {
-        // Игнорируем ошибки удаления
-      }
-      
-      if (decoded && decoded.trim()) {
-        console.log(`🎉 QR успешно декодирован методом ${i + 1} (${method.name}):`, decoded.substring(0, 100) + '...');
+      if (decoded && decoded.length > 0) {
+        const qrData = decoded[0].data.toString('utf8');
+        console.log(`🎉 QR успешно декодирован методом ${i + 1} (${method.name}):`, qrData.substring(0, 100) + '...');
         return {
           success: true,
-          data: decoded,
+          data: qrData,
           method: i + 1,
           methodName: method.name
         };
