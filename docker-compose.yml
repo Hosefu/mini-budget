@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - FNS_API_TOKEN=${FNS_API_TOKEN}
+      - SESSION_KEY=${SESSION_KEY:-mini-budget-secret-key-change-in-production}
+      - PORT=3000
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/me"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.docker.compose.project=mini-budget"
+      - "description=Семейный бюджет-трекер с QR сканированием" 

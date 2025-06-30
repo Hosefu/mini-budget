@@ -1,0 +1,80 @@
+# Зависимости
+node_modules/
+*/node_modules/
+
+# Сборки
+dist/
+build/
+*/dist/
+*/build/
+
+# Логи
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime данные
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Переменные окружения и секреты
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Данные приложения
+data/
+*.db
+*.sqlite
+
+# OS метафайлы
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+
+# Опциональные npm cache директории
+.npm
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Docker
+docker-compose.override.yml
+
+# Temporary folders
+tmp/
+temp/ 

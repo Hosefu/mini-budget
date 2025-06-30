@@ -1,0 +1,39 @@
+{
+  "name": "mini-budget",
+  "version": "1.0.0",
+  "description": "Семейный бюджет-трекер с QR сканированием чеков",
+  "scripts": {
+    "dev": "cd server && npm run dev",
+    "build": "cd web && npm run build && cd ../server && npm run build",
+    "start": "cd server && npm start",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose down && docker-compose up -d",
+    "install:all": "cd web && npm install && cd ../server && npm install",
+    "clean": "rm -rf web/dist web/node_modules server/dist server/node_modules node_modules",
+    "health": "curl -f http://localhost:3000/api/me || echo 'Сервер недоступен'"
+  },
+  "keywords": [
+    "budget",
+    "family",
+    "qr",
+    "expenses",
+    "claude-ai",
+    "fns-api"
+  ],
+  "author": "Егор & Сёма",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/mini-budget.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/mini-budget/issues"
+  },
+  "homepage": "https://github.com/username/mini-budget#readme",
+  "dependencies": {
+    "@heroicons/react": "^2.2.0"
+  }
+}

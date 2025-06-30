@@ -1,0 +1,33 @@
+name: Docker Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      run: |
+        docker build -t mini-budget:latest .
+        
+    - name: Test Docker image
+      run: |
+        docker run -d --name test-app -p 3000:3000 \
+          -e NODE_ENV=production \
+          -e SESSION_KEY=test-key \
+          mini-budget:latest
+        sleep 30
+        curl -f http://localhost:3000 || exit 1
+        docker stop test-app
+        docker rm test-app 
