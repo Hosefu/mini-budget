@@ -11,16 +11,4 @@ services:
       - FNS_API_TOKEN=${FNS_API_TOKEN}
       - SESSION_KEY=${SESSION_KEY:-mini-budget-secret-key-change-in-production}
       - PORT=3000
-    volumes:
-      - ./data:/app/data
-    user: "0:0"  # Запуск от root для создания файлов
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/me"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    labels:
-      - "com.docker.compose.project=mini-budget"
-      - "description=Семейный бюджет-трекер с QR сканированием" 
+    restart: unless-stopped 
