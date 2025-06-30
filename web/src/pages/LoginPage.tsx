@@ -10,8 +10,18 @@ export default function LoginPage() {
   // Мутация для входа
   const loginMutation = useMutation({
     mutationFn: api.login,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Сразу записываем пользователя в кэш React Query
+      queryClient.setQueryData(['me'], { role: data.role })
+      // Инвалидируем запросы
       queryClient.invalidateQueries({ queryKey: ['me'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
+      
+      // Небольшая задержка для обновления состояния React Query
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['me'] })
+      }, 50)
     },
     onError: (error: Error) => {
       setError(error.message)
