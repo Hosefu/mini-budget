@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-import decodeQR from 'qr/decode.js';
-import { Bitmap } from 'qr';
 
 const router = Router();
 
@@ -124,6 +122,10 @@ router.post('/scan-qr', upload.single('image'), async (req: Request & { file?: a
           .raw()
           .toBuffer({ resolveWithObject: true });
 
+        // Динамически импортируем QR библиотеку (ES модуль)
+        const { default: decodeQR } = await import('qr/decode.js');
+        const { Bitmap } = await import('qr');
+        
         // Создаем bitmap для QR декодера
         const bitmap = new Bitmap({ 
           width: info.width, 
