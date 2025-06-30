@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../services/api'
 import QrScanner from 'qr-scanner'
 
+
 type ScanMode = 'camera' | 'upload' | 'manual'
 
 export default function ScanPage() {
@@ -43,7 +44,7 @@ export default function ScanPage() {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) {
       resetToMenu()
@@ -52,24 +53,163 @@ export default function ScanPage() {
 
     setMode('upload')
     setIsScanning(true)
+    setScanError('')
 
-    QrScanner.scanImage(file, { returnDetailedScanResult: true })
-      .then(result => {
-        console.log('QR код найден:', result.data)
+    try {
+      console.log('🔍 Начинаем сканирование QR с файла:', file.name)
+      
+      // Первая попытка: qr-scanner
+      try {
+        const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true })
+        console.log('✅ QR код найден (qr-scanner):', result.data)
         processQRMutation.mutate(result.data)
-      })
-      .catch(error => {
-        console.error('Ошибка сканирования QR с изображения:', error)
-        setScanError('QR код не найден на изображении. Попробуйте другое фото или введите данные вручную.')
-        setTimeout(() => {
-          resetToMenu()
-        }, 3000)
-      })
-      .finally(() => {
-        setIsScanning(false)
-        // Очищаем input
-        e.target.value = ''
-      })
+        return
+      } catch (qrScannerError) {
+        console.log('⚠️ qr-scanner не смог найти QR:', qrScannerError)
+      }
+
+      // Вторая попытка: Canvas + увеличение контрастности
+      try {
+        console.log('🔄 Пробуем с увеличением контрастности...')
+        const processedFile = await enhanceImageForQR(file, 'contrast')
+        const result = await QrScanner.scanImage(processedFile, { returnDetailedScanResult: true })
+        console.log('✅ QR код найден (контрастность):', result.data)
+        processQRMutation.mutate(result.data)
+        return
+      } catch (enhancedError) {
+        console.log('⚠️ Увеличение контрастности не помогло:', enhancedError)
+      }
+
+      // Третья попытка: Canvas + увеличение резкости  
+      try {
+        console.log('🔄 Пробуем с увеличением резкости...')
+        const processedFile = await enhanceImageForQR(file, 'sharpen')
+        const result = await QrScanner.scanImage(processedFile, { returnDetailedScanResult: true })
+        console.log('✅ QR код найден (резкость):', result.data)
+        processQRMutation.mutate(result.data)
+        return
+      } catch (enhancedError) {
+        console.log('⚠️ Увеличение резкости не помогло:', enhancedError)
+      }
+
+      // Четвертая попытка: Масштабирование
+      try {
+        console.log('🔄 Пробуем с увеличением размера...')
+        const processedFile = await enhanceImageForQR(file, 'scale')
+        const result = await QrScanner.scanImage(processedFile, { returnDetailedScanResult: true })
+        console.log('✅ QR код найден (масштаб):', result.data)
+        processQRMutation.mutate(result.data)
+        return
+      } catch (enhancedError) {
+        console.log('⚠️ Масштабирование не помогло:', enhancedError)
+      }
+
+      // Если все методы не сработали
+      setScanError('QR код не найден на изображении. Убедитесь что QR код четко виден и попробуйте:\n• Более качественное фото\n• Лучшее освещение\n• QR код полностью в кадре\n\nИли введите данные вручную.')
+      
+      setTimeout(() => {
+        resetToMenu()
+      }, 5000)
+
+    } catch (error) {
+      console.error('❌ Общая ошибка при обработке файла:', error)
+      setScanError('Ошибка при обработке файла. Попробуйте другое изображение.')
+      setTimeout(() => {
+        resetToMenu()
+      }, 3000)
+    } finally {
+      setIsScanning(false)
+      // Очищаем input
+      e.target.value = ''
+    }
+  }
+
+
+
+  // Функция для улучшения изображения
+  const enhanceImageForQR = (file: File, method: 'contrast' | 'sharpen' | 'scale' = 'contrast'): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      
+      if (!ctx) {
+        reject(new Error('Canvas не поддерживается'))
+        return
+      }
+
+      img.onload = () => {
+        let scaleMultiplier = 1
+        
+        if (method === 'scale') {
+          // Сильное увеличение для мелких QR кодов
+          scaleMultiplier = Math.max(2, 1200 / Math.max(img.width, img.height))
+        } else {
+          // Умеренное увеличение для остальных методов
+          scaleMultiplier = Math.max(1, 800 / Math.max(img.width, img.height))
+        }
+        
+        canvas.width = img.width * scaleMultiplier
+        canvas.height = img.height * scaleMultiplier
+        
+        // Рисуем изображение
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        
+        // Получаем данные пикселей
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        
+        if (method === 'contrast') {
+          // Увеличиваем контраст
+          const contrast = 1.8
+          const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255))
+          
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128))     // R
+            data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128)) // G  
+            data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128)) // B
+          }
+        } else if (method === 'sharpen') {
+          // Простая резкость через увеличение контраста краев
+          const width = canvas.width
+          const originalData = new Uint8ClampedArray(data)
+          
+          for (let y = 1; y < canvas.height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+              for (let c = 0; c < 3; c++) { // RGB каналы
+                const idx = (y * width + x) * 4 + c
+                const center = originalData[idx]
+                const top = originalData[((y - 1) * width + x) * 4 + c]
+                const bottom = originalData[((y + 1) * width + x) * 4 + c]
+                const left = originalData[(y * width + (x - 1)) * 4 + c]
+                const right = originalData[(y * width + (x + 1)) * 4 + c]
+                
+                // Лаплацианский фильтр для резкости
+                const sharpened = center * 5 - top - bottom - left - right
+                data[idx] = Math.min(255, Math.max(0, sharpened))
+              }
+            }
+          }
+        }
+        // Для method === 'scale' просто оставляем увеличенное изображение без дополнительной обработки
+        
+        // Применяем обработанные данные
+        ctx.putImageData(imageData, 0, 0)
+        
+        // Конвертируем обратно в файл
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const enhancedFile = new File([blob], `enhanced_${file.name}`, { type: 'image/jpeg' })
+            resolve(enhancedFile)
+          } else {
+            reject(new Error('Не удалось создать обработанное изображение'))
+          }
+        }, 'image/jpeg', 0.9)
+      }
+      
+      img.onerror = () => reject(new Error('Не удалось загрузить изображение'))
+      img.src = URL.createObjectURL(file)
+    })
   }
 
   const startCameraScanning = async () => {
@@ -369,7 +509,13 @@ export default function ScanPage() {
             <div className="space-y-4">
               <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-gray-600">Анализируем изображение...</p>
-              <p className="text-xs text-gray-500">Ищем QR код на фото</p>
+              <p className="text-xs text-gray-500">Пробуем разные методы обработки</p>
+              <div className="text-xs text-gray-400 space-y-1">
+                <div>• Стандартное сканирование</div>
+                <div>• Увеличение контрастности</div>
+                <div>• Улучшение резкости</div>
+                <div>• Масштабирование</div>
+              </div>
             </div>
           ) : processQRMutation.isPending ? (
             <div className="space-y-4">
@@ -526,5 +672,10 @@ export default function ScanPage() {
     )
   }
 
-  return null
+  return (
+    <>
+      {/* Скрытый элемент для html5-qrcode */}
+      <div id="temp-qr-reader" style={{ display: 'none' }}></div>
+    </>
+  )
 } 
