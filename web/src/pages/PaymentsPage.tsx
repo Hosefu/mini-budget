@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, utils, Payment, Balance } from '../services/api'
+import { api, utils, Payment } from '../services/api'
 import PaymentForm from '../components/PaymentForm'
 import BalanceCard from '../components/BalanceCard'
 import {
