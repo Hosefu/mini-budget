@@ -13,6 +13,15 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Устанавливаем системные зависимости для компиляции нативных модулей
+RUN apk add --no-cache \
+    build-base \
+    python3 \
+    make \
+    g++ \
+    libpng-dev \
+    libjpeg-turbo-dev
+
 # Копируем package файлы сервера
 COPY server/package*.json ./
 RUN npm ci
