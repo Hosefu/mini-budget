@@ -5,6 +5,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { initDatabase } from './db';
 import routes from './routes';
+import qrScanner from './qr-scanner';
 
 // Загружаем .env из корня проекта
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -36,6 +37,7 @@ app.use(cookieSession({
 
 // API роуты
 app.use('/api', routes);
+app.use('/api', qrScanner);
 
 // В продакшене раздаем статику React приложения
 if (process.env.NODE_ENV === 'production') {

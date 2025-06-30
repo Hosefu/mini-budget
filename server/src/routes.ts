@@ -5,6 +5,8 @@ import { classifyItems } from './ai';
 
 const router = Router();
 
+
+
 // Расширяем типы для session
 declare module 'express-session' {
   interface SessionData {
@@ -760,5 +762,7 @@ router.post('/payment/:id/add-item', requireAuth, (req: Request, res: Response) 
     res.status(500).json({ error: 'Ошибка добавления товара' });
   }
 });
+
+
 
 export default router; 
